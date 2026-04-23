@@ -36,19 +36,12 @@ async function startServer() {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      // Instead of an RPC function (which may be different in Insforge), let's just query the api_keys table directly
-      // Note: for this to work with anonKey, RLS must allow reading it, or API key usage must not require RLS.
-      // But we mapped API key previously.
-      const { data: keys, error: keyError } = await insforge.database
-        .from('api_keys')
-        .select('user_id')
-        .eq('api_key', apiKey);
+      // Check API key securely bypassing RLS through the rpc function we created
+      const { data: userId, error: rpcError } = await insforge.database.rpc('get_user_from_api_key', { api_key_val: apiKey });
 
-      if (keyError || !keys || keys.length === 0) {
+      if (rpcError || !userId) {
         return res.status(401).json({ error: 'Invalid API Key' });
       }
-
-      const userId = keys[0].user_id;
 
       const file = req.file;
       const fileName = `${userId}/${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;

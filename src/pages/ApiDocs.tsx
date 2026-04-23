@@ -10,68 +10,64 @@ export default function ApiDocs() {
         <p className="text-slate-500 text-sm mt-1">Integrate ForgeDrive into your applications.</p>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col shadow-sm">
+        <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center gap-2">
            <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-1 rounded tracking-tight">POST</span>
-           <code className="text-sm font-mono text-slate-800">{originUrl}/api/upload</code>
+           <code className="text-xs font-mono text-slate-800 break-all">{originUrl}/api/upload</code>
         </div>
         
-        <div className="p-6 overflow-y-auto text-xs space-y-6">
+        <div className="p-4 overflow-y-auto text-xs space-y-6">
           <div>
-            <h3 className="font-semibold text-slate-700 mb-2 uppercase tracking-tighter">Description</h3>
-            <p className="text-slate-600 text-sm">Uploads a file to your universal bucket and returns a public URL. Requires a valid API key.</p>
+            <h3 className="font-semibold text-slate-700 mb-2 uppercase tracking-tighter text-[10px]">Description</h3>
+            <p className="text-slate-600 text-[13px] leading-relaxed">Uploads a file to your universal bucket and returns a public URL. Requires a valid API key.</p>
           </div>
 
           <div>
-            <h3 className="font-semibold text-slate-700 mb-2 uppercase tracking-tighter">Authentication</h3>
-            <p className="text-slate-600 mb-2 text-sm">Pass your API key using the standard Bearer Token authorization header:</p>
-            <div className="bg-slate-900 text-slate-300 p-3 rounded font-mono leading-relaxed overflow-x-auto">
+            <h3 className="font-semibold text-slate-700 mb-2 uppercase tracking-tighter text-[10px]">Authentication</h3>
+            <p className="text-slate-600 mb-2 text-[13px] leading-relaxed">Pass your API key using the standard Bearer Token authorization header:</p>
+            <div className="bg-slate-900 text-slate-300 p-3 rounded-lg font-mono leading-relaxed overflow-x-auto text-[11px] shadow-inner">
               <pre>
-                Authorization: Bearer sk_your_api_key_here
+                Authorization: Bearer sk_your_key
               </pre>
             </div>
           </div>
 
           <div>
-            <h3 className="font-semibold text-slate-700 mb-2 uppercase tracking-tighter">Request Format (multipart/form-data)</h3>
-            <table className="w-full text-left border-collapse border border-slate-100 rounded-lg">
-              <thead className="bg-slate-50">
-                <tr className="text-[10px] font-semibold text-slate-400 uppercase">
-                  <th className="px-6 py-3 border-b">Key</th>
-                  <th className="px-6 py-3 border-b">Type</th>
-                  <th className="px-6 py-3 border-b">Description</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                <tr className="hover:bg-slate-50">
-                  <td className="px-6 py-4 border-b font-mono text-indigo-600 text-xs text-medium">file</td>
-                  <td className="px-6 py-4 border-b text-slate-500">File Blob</td>
-                  <td className="px-6 py-4 border-b text-slate-500">The file you want to upload.</td>
-                </tr>
-              </tbody>
-            </table>
+            <h3 className="font-semibold text-slate-700 mb-2 uppercase tracking-tighter text-[10px]">Request Format (multipart/form-data)</h3>
+            <div className="border border-slate-100 rounded-lg overflow-hidden">
+              <div className="grid grid-cols-3 bg-slate-50 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                <div className="p-2.5 border-b border-r border-slate-100">Key</div>
+                <div className="p-2.5 border-b border-r border-slate-100">Type</div>
+                <div className="p-2.5 border-b border-slate-100">Details</div>
+              </div>
+              <div className="grid grid-cols-3 text-xs">
+                <div className="p-2.5 border-r border-slate-100 font-mono text-indigo-600 font-medium">file</div>
+                <div className="p-2.5 border-r border-slate-100 text-slate-500">File Blob</div>
+                <div className="p-2.5 text-slate-500">The file to upload.</div>
+              </div>
+            </div>
           </div>
 
           <div>
-            <h3 className="font-semibold text-slate-700 mb-2 uppercase tracking-tighter">Example Request using cURL</h3>
-            <div className="bg-slate-900 text-slate-300 p-3 rounded font-mono leading-relaxed overflow-x-auto">
+            <h3 className="font-semibold text-slate-700 mb-2 uppercase tracking-tighter text-[10px]">Example Request using cURL</h3>
+            <div className="bg-slate-900 text-slate-300 p-3 rounded-lg font-mono leading-relaxed overflow-x-auto text-[11px] shadow-inner">
               <pre className="whitespace-pre-wrap">
 {`curl -X POST ${originUrl}/api/upload \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -F "file=@/path/to/your/image.png"`}
+  -H "Authorization: Bearer YOUR_KEY" \\
+  -F "file=@/path/to/image.png"`}
               </pre>
             </div>
           </div>
 
           <div>
-            <h3 className="font-semibold text-slate-700 mb-2 uppercase tracking-tighter">Response</h3>
-            <p className="text-slate-600 text-sm mb-2">Returns a JSON object containing the universal link if successful.</p>
-            <div className="bg-slate-900 text-slate-300 p-3 rounded font-mono leading-relaxed overflow-x-auto text-[11px]">
+            <h3 className="font-semibold text-slate-700 mb-2 uppercase tracking-tighter text-[10px]">Response</h3>
+            <p className="text-slate-600 text-[13px] mb-2 leading-relaxed">Returns a JSON object containing the universal link if successful.</p>
+            <div className="bg-slate-900 text-slate-300 p-3 rounded-lg font-mono leading-relaxed overflow-x-auto text-[10px] shadow-inner">
               <pre>
 {`{
   "success": true,
-  "message": "File uploaded successfully",
-  "url": "https://ij78z9ah.ap-southeast.insforge.app/storage/v1/object/public/uploads/...",
+  "message": "File uploaded",
+  "url": "https://...",
   "file": {
     "name": "image.png",
     "size": 10245,

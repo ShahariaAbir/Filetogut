@@ -86,7 +86,7 @@ export default function ApiKeys() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between flex-col gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">API Keys</h1>
           <p className="text-slate-500 text-sm mt-1">Manage integration keys to upload files programmatically.</p>
@@ -95,14 +95,14 @@ export default function ApiKeys() {
         <button
           onClick={generateKey}
           disabled={generating}
-          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition disabled:opacity-50 text-sm font-medium shadow-sm"
+          className="flex items-center justify-center w-full sm:w-auto gap-2 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition disabled:opacity-50 text-sm font-medium shadow-sm"
         >
           {generating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
           Generate New Key
         </button>
       </div>
 
-      <div className="bg-amber-50 border border-amber-100 p-3 rounded text-amber-800 text-[11px]">
+      <div className="bg-amber-50 border border-amber-100 p-3 rounded text-amber-800 text-[11px] leading-relaxed">
         <strong>Security Warning:</strong> Your API keys carry full upload privileges to your account. Do not share them publicly or commit them to source control. If a key is compromised, delete it immediately.
       </div>
 
@@ -111,7 +111,7 @@ export default function ApiKeys() {
           <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
         </div>
       ) : keys.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-xl p-12 text-center border-dashed border-2 bg-slate-50">
+        <div className="bg-white border border-slate-200 rounded-xl p-8 text-center border-dashed border-2 bg-slate-50">
           <Key className="w-10 h-10 text-slate-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-slate-900 mb-1">No API keys generated</h3>
           <p className="text-slate-500 text-sm">Create your first key to start uploading files via the API.</p>
@@ -121,29 +121,33 @@ export default function ApiKeys() {
             {keys.map((key) => {
               const isVisible = visibleKeys[key.id];
               return (
-                <div key={key.id} className="bg-indigo-900 text-white rounded-xl p-6 shadow-xl">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-white">{key.title}</h3>
-                    <button onClick={() => deleteKey(key.id)} className="text-red-400 hover:text-red-300 transition-colors text-sm font-medium">Revoke Key</button>
+                <div key={key.id} className="bg-indigo-900 text-white rounded-xl p-5 shadow-sm border border-indigo-800">
+                  <div className="flex items-start justify-between mb-1">
+                    <h3 className="text-base font-semibold text-white break-words pr-2">{key.title}</h3>
+                    <button onClick={() => deleteKey(key.id)} className="text-indigo-300 hover:text-red-400 transition-colors bg-indigo-800/50 hover:bg-indigo-900 p-1.5 rounded-md mt-[-4px] mr-[-4px]" title="Revoke Key">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
-                  <p className="text-indigo-200 text-xs mb-4">Created on {new Date(key.created_at).toLocaleDateString()}</p>
+                  <p className="text-indigo-300 text-xs mb-4">Created {new Date(key.created_at).toLocaleDateString()}</p>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <div>
-                      <label className="text-[10px] uppercase tracking-widest text-indigo-300 font-bold mb-1 block">Private API Key</label>
-                      <div className="bg-indigo-950 rounded p-3 flex justify-between items-center border border-indigo-700/50">
+                      <label className="text-[10px] uppercase tracking-widest text-indigo-400 font-bold mb-1 block">Private API Key</label>
+                      <div className="bg-indigo-950 rounded p-2.5 flex justify-between items-center border border-indigo-800/50 flex-wrap gap-2">
                         <input 
                           type={isVisible ? "text" : "password"} 
                           value={key.api_key} 
                           readOnly 
-                          className="font-mono text-xs overflow-hidden text-ellipsis mr-2 bg-transparent border-none outline-none text-indigo-400 w-full"
+                          className="font-mono text-xs overflow-hidden text-ellipsis bg-transparent border-none outline-none text-indigo-300 w-full mb-1"
                         />
-                        <div className="flex gap-3 ml-2 flex-shrink-0">
-                          <button onClick={() => toggleVisibility(key.id)} className="text-indigo-400 hover:text-white transition">
-                            {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        <div className="flex gap-2 w-full justify-end border-t border-indigo-900/50 pt-2 mt-1">
+                          <button onClick={() => toggleVisibility(key.id)} className="text-indigo-400 hover:text-white transition flex items-center gap-1.5 text-xs bg-indigo-900 px-2 py-1 rounded">
+                            {isVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            {isVisible ? 'Hide' : 'Reveal'}
                           </button>
-                          <button onClick={() => copyToClipboard(key.api_key)} className="text-indigo-400 hover:text-white transition uppercase text-[10px] tracking-wider font-bold">
-                            COPY
+                          <button onClick={() => copyToClipboard(key.api_key)} className="text-indigo-400 hover:text-white transition flex items-center gap-1.5 text-xs bg-indigo-900 px-2 py-1 rounded">
+                            <Copy className="w-3.5 h-3.5" />
+                            Copy
                           </button>
                         </div>
                       </div>
