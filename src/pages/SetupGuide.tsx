@@ -33,12 +33,11 @@ CREATE POLICY "Users can view own api keys" ON public.api_keys FOR SELECT USING 
 CREATE POLICY "Users can insert own api keys" ON public.api_keys FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can delete own api keys" ON public.api_keys FOR DELETE USING (auth.uid() = user_id);
 
--- Storage configuration
-INSERT INTO storage.buckets (id, name, public) VALUES ('uploads', 'uploads', true);
-
-CREATE POLICY "Public Read Access" ON storage.objects FOR SELECT USING (bucket_id = 'uploads');
-CREATE POLICY "Authenticated users can upload" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'uploads');
-CREATE POLICY "Users can delete own uploads" ON storage.objects FOR DELETE USING (bucket_id = 'uploads' AND auth.uid() = owner);
+-- Storage configuration (IMPORTANT: Create the 'uploads' bucket manually from the Insforge Dashboard first!)
+-- 1. Go to Storage in the Insforge Dashboard
+-- 2. Click "Create Bucket"
+-- 3. Name it "uploads" and make sure "Public" is turned ON.
+-- Note: Security policies for uploading into this bucket are managed automatically or via the Storage UI.
 
 -- Secure RPC Database logic (Needed for API uploads using Custom API Keys)
 CREATE OR REPLACE FUNCTION get_user_from_api_key(api_key_val text)
@@ -93,8 +92,7 @@ GRANT EXECUTE ON FUNCTION get_user_from_api_key(text) TO anon, authenticated;
          <ul className="mt-2 space-y-2 list-disc list-inside">
             <li>Creates the <b>files</b> and <b>api_keys</b> tables.</li>
             <li>Enables <b>Row Level Security (RLS)</b> so users can only see their own data.</li>
-            <li>Creates a public storage bucket named <b>uploads</b>.</li>
-            <li>Creates completely secure policies directly on the file bucket.</li>
+            <li>Manually states to create a public storage bucket named <b>uploads</b> via the Dashboard.</li>
             <li>Adds a database function so the backend can verify your custom API Keys securely.</li>
          </ul>
       </div>
