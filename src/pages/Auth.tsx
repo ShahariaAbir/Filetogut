@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { insforge } from '../lib/insforge';
 import { Mail, Lock, UploadCloud, Loader2 } from 'lucide-react';
 
 export default function Auth() {
@@ -18,18 +18,21 @@ export default function Auth() {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { error } = await insforge.auth.signUp({
           email,
           password,
         });
         if (error) throw error;
-        setMsg('Check your email for the confirmation link.');
+        setMsg('Account created! Please check your email or sign in immediately if no confirmation is needed.');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await insforge.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
+        if (data) {
+          window.dispatchEvent(new CustomEvent('insforge-login'));
+        }
       }
     } catch (err: any) {
       if (err.message?.includes('is not valid JSON') || err.message?.includes('Unexpected token')) {

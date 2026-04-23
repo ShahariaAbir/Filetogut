@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router';
-import { supabase } from '../lib/supabase';
+import { insforge } from '../lib/insforge';
 import { FolderOpen, Key, BookOpen, Database, LogOut, UploadCloud } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -8,7 +8,7 @@ export default function DashboardLayout() {
 
   const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut();
+      await insforge.auth.signOut();
     } catch(e) {
       // Ignored for dev bypass mode
     }

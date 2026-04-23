@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { useEffect, useState } from 'react';
-import { supabase } from './lib/supabase';
-import { Session } from '@supabase/supabase-js';
+import { insforge } from './lib/insforge';
 import Auth from './pages/Auth';
 import DashboardLayout from './components/DashboardLayout';
 import Files from './pages/Files';
@@ -10,20 +9,25 @@ import SetupGuide from './pages/SetupGuide';
 import ApiDocs from './pages/ApiDocs';
 
 export default function App() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    insforge.auth.getCurrentUser().then(({ data }) => {
+      if (data?.user) {
+        setSession({ user: data.user });
+      }
       setLoading(false);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    const handleLogin = () => {
+      insforge.auth.getCurrentUser().then(({ data }) => {
+        if (data?.user) {
+          setSession({ user: data.user });
+        }
+      });
+    };
+    window.addEventListener('insforge-login', handleLogin);
 
     // Handle dev bypass
     const handleBypass = () => {
@@ -33,7 +37,7 @@ export default function App() {
         expires_in: 3600,
         expires_at: Math.floor(Date.now() / 1000) + 3600,
         token_type: 'bearer',
-        user: { id: 'dev-user', app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: new Date().toISOString() }
+        user: { id: 'dev-user', email: 'dev@insforge.app', app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: new Date().toISOString() }
       } as any);
     };
     window.addEventListener('dev-login-bypass', handleBypass);
@@ -44,7 +48,7 @@ export default function App() {
     window.addEventListener('dev-logout', handleLogoutBypass);
 
     return () => {
-      subscription.unsubscribe();
+      window.removeEventListener('insforge-login', handleLogin);
       window.removeEventListener('dev-login-bypass', handleBypass);
       window.removeEventListener('dev-logout', handleLogoutBypass);
     };

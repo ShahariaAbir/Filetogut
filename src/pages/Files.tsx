@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
+import { insforge } from '../lib/insforge';
 import { Upload, Copy, Trash2, File, Link as LinkIcon, Loader2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -23,13 +23,12 @@ export default function Files() {
   }, []);
 
   const fetchFiles = async () => {
-    const { data, error } = await supabase
+    const { data, error } = await insforge.database
       .from('files')
       .select('*')
-      .order('created_at', { ascending: false });
       
     if (!error && data) {
-      setFiles(data);
+      setFiles((data as FileData[]).sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
     }
     setLoading(false);
   };
@@ -40,33 +39,29 @@ export default function Files() {
 
     setUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await insforge.auth.getCurrentUser();
       if (!user) throw new Error('Not authenticated');
 
-      const fileExt = file.name.split('.').pop();
       const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
       const fileName = `${user.id}/${Date.now()}-${safeName}`;
 
-      // 1. Upload to Storage
-      const { error: uploadError } = await supabase.storage
+      // 1. Upload to Storage using Insforge upload()
+      const { data: uploadData, error: uploadError } = await insforge.storage
         .from('uploads')
-        .upload(fileName, file, { cacheControl: '3600', upsert: false });
+        .upload(fileName, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError || !uploadData) throw uploadError || new Error('Upload returned empty data');
 
-      // 2. Get Public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('uploads')
-        .getPublicUrl(fileName);
+      const publicUrl = uploadData.url;
 
       // 3. Insert into database
-      const { error: dbError } = await supabase.from('files').insert({
+      const { error: dbError } = await insforge.database.from('files').insert([{
         user_id: user.id,
         file_name: file.name,
         content_type: file.type,
         size: file.size,
         public_url: publicUrl,
-      });
+      }]);
 
       if (dbError) throw dbError;
 
@@ -89,7 +84,7 @@ export default function Files() {
     if (!confirm('Are you sure you want to delete this file?')) return;
     
     // We only delete from DB here for simplicity, in a real app you'd also remove from Storage
-    const { error } = await supabase.from('files').delete().eq('id', id);
+    const { error } = await insforge.database.from('files').delete().eq('id', id);
     if (error) alert(`Delete failed: ${error.message}`);
     else fetchFiles();
   };

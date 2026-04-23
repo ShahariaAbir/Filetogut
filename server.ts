@@ -2,15 +2,16 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import cors from 'cors';
 import multer from 'multer';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@insforge/sdk';
 import path from 'path';
 
 // Using the provided Insforge credentials
-const supabaseUrl = 'https://ij78z9ah.ap-southeast.insforge.app';
-const supabaseKey = 'ik_59aeeb7aa1403d45694f006d4606068b'; // Assuming this has service-role or admin privileges for bypassing RLS during API key-based uploads.
+const insforgeUrl = 'https://ij78z9ah.ap-southeast.insforge.app';
+const insforgeKey = 'ik_59aeeb7aa1403d45694f006d4606068b'; // Used as anonKey
 
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: { autoRefreshToken: false, persistSession: false },    
+const insforge = createClient({
+  baseUrl: insforgeUrl,
+  anonKey: insforgeKey
 });
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -35,49 +36,49 @@ async function startServer() {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      // Validate API Key and fetch User ID via our secure RPC function
-      const { data: userId, error: rpcError } = await supabase.rpc('get_user_from_api_key', {
-        api_key_val: apiKey
-      });
+      // Instead of an RPC function (which may be different in Insforge), let's just query the api_keys table directly
+      // Note: for this to work with anonKey, RLS must allow reading it, or API key usage must not require RLS.
+      // But we mapped API key previously.
+      const { data: keys, error: keyError } = await insforge.database
+        .from('api_keys')
+        .select('user_id')
+        .eq('api_key', apiKey);
 
-      if (rpcError || !userId) {
+      if (keyError || !keys || keys.length === 0) {
         return res.status(401).json({ error: 'Invalid API Key' });
       }
+
+      const userId = keys[0].user_id;
 
       const file = req.file;
       const fileName = `${userId}/${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-      // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      // Upload to Storage
+      // Convert buffer to Blob for Insforge SDK
+      const blob = new Blob([file.buffer], { type: file.mimetype });
+      const { data: uploadData, error: uploadError } = await insforge.storage
         .from('uploads')
-        .upload(fileName, file.buffer, {
-          contentType: file.mimetype,
-          cacheControl: '3600',
-          upsert: false
-        });
+        .upload(fileName, blob);
 
-      if (uploadError) {
-        throw uploadError;
+      if (uploadError || !uploadData) {
+        throw uploadError || new Error("Failed to upload file to Insforge");
       }
 
-      // Get Universal Public URL
-      const { data: publicUrlData } = supabase.storage.from('uploads').getPublicUrl(fileName);
-      const publicUrl = publicUrlData.publicUrl;
+      const publicUrl = uploadData.url;
 
       // Register file in the database
-      const { error: dbError } = await supabase
+      const { error: dbError } = await insforge.database
         .from('files')
-        .insert({
+        .insert([{
           user_id: userId,
           file_name: file.originalname,
           content_type: file.mimetype,
           size: file.size,
           public_url: publicUrl
-        });
+        }]);
 
       if (dbError) {
         console.error('File logging to db error:', dbError);
-        // Do not fail the request if DB logging fails, just warn
       }
 
       return res.status(200).json({

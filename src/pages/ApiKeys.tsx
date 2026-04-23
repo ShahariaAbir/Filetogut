@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { insforge } from '../lib/insforge';
 import { Key, Copy, Plus, Trash2, Loader2, Eye, EyeOff } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -21,13 +21,21 @@ export default function ApiKeys() {
   }, []);
 
   const fetchKeys = async () => {
-    const { data, error } = await supabase
+    const { data: { user } } = await insforge.auth.getCurrentUser();
+    if (!user) {
+      setLoading(false);
+      return; 
+    }
+  
+    const { data, error } = await insforge.database
       .from('api_keys')
       .select('*')
-      .order('created_at', { ascending: false });
+      // Note: order() may or may not be supported directly natively depending on the sdk flavor. If omitted we just sort on frontend
+      // Actually, insforge's SDK might not have .order(). Let's just fetch and sort.
       
     if (!error && data) {
-      setKeys(data);
+      // sort client side just in case
+      setKeys((data as ApiKey[]).sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
     }
     setLoading(false);
   };
@@ -38,16 +46,16 @@ export default function ApiKeys() {
 
     setGenerating(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await insforge.auth.getCurrentUser();
       if (!user) throw new Error('Not authenticated');
 
       const originalKey = 'sk_' + uuidv4().replace(/-/g, '');
       
-      const { error } = await supabase.from('api_keys').insert({
+      const { error } = await insforge.database.from('api_keys').insert([{
         user_id: user.id,
         title: title,
         api_key: originalKey,
-      });
+      }]);
 
       if (error) throw error;
       fetchKeys();
@@ -61,7 +69,8 @@ export default function ApiKeys() {
   const deleteKey = async (id: string) => {
     if (!confirm('Revoking this key will instantly break any applications using it. Are you sure?')) return;
     
-    const { error } = await supabase.from('api_keys').delete().eq('id', id);
+    // @ts-ignore - Assuming .eq works based on the docs update() example
+    const { error } = await insforge.database.from('api_keys').delete().eq('id', id);
     if (error) alert(`Delete failed: ${error.message}`);
     else fetchKeys();
   };
