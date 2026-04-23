@@ -70,9 +70,12 @@ GRANT EXECUTE ON FUNCTION get_user_from_api_key(text) TO anon, authenticated;
              <Terminal className="w-3.5 h-3.5 text-slate-500" /> setup.sql
           </div>
           <button 
-            onClick={() => {
-              navigator.clipboard.writeText(sqlScript);
-              alert('SQL copied to clipboard!');
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(sqlScript);
+              } catch(e) {
+                console.error("Clipboard failed");
+              }
             }}
             className="flex items-center gap-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md text-[10px] uppercase font-bold tracking-wider transition"
           >

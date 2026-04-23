@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { insforge } from '../lib/insforge';
-import { Upload, Copy, Trash2, File, Link as LinkIcon, Loader2 } from 'lucide-react';
+import { Upload, Copy, Trash2, File, Link as LinkIcon, Loader2, AlertTriangle } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface FileData {
@@ -17,6 +17,9 @@ export default function Files() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Modals state
+  const [deleteConfirmFileId, setDeleteConfirmFileId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchFiles();
@@ -68,25 +71,30 @@ export default function Files() {
       // Refresh list
       fetchFiles();
     } catch (error: any) {
-      alert(`Upload failed: ${error.message}`);
+      console.error(`Upload failed: ${error.message}`);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const copyToClipboard = (url: string) => {
-    navigator.clipboard.writeText(url);
-    alert('Link copied to clipboard!');
+  const copyToClipboard = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch (e) {
+      console.error('Clipboard failed');
+    }
   };
 
-  const deleteFile = async (id: string, url: string) => {
-    if (!confirm('Are you sure you want to delete this file?')) return;
+  const confirmDeleteFile = async () => {
+    if (!deleteConfirmFileId) return;
     
     // We only delete from DB here for simplicity, in a real app you'd also remove from Storage
-    const { error } = await insforge.database.from('files').delete().eq('id', id);
-    if (error) alert(`Delete failed: ${error.message}`);
+    const { error } = await insforge.database.from('files').delete().eq('id', deleteConfirmFileId);
+    if (error) console.error(`Delete failed: ${error.message}`);
     else fetchFiles();
+    
+    setDeleteConfirmFileId(null);
   };
 
   const formatSize = (bytes: number) => {
@@ -98,7 +106,7 @@ export default function Files() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">My Files</h1>
@@ -164,12 +172,41 @@ export default function Files() {
                 <button onClick={() => copyToClipboard(file.public_url)} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-md text-xs font-medium text-indigo-700 transition" title="Copy URL">
                   <Copy className="w-3.5 h-3.5" /> Copy
                 </button>
-                <button onClick={() => deleteFile(file.id, file.public_url)} className="flex items-center justify-center p-1.5 hover:bg-red-50 rounded-md text-slate-400 hover:text-red-600 transition ml-2" title="Delete">
+                <button onClick={() => setDeleteConfirmFileId(file.id)} className="flex items-center justify-center p-1.5 hover:bg-red-50 rounded-md text-slate-400 hover:text-red-600 transition ml-2" title="Delete">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Delete Confirm Modal */}
+      {deleteConfirmFileId && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+             <div className="p-6 text-center">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+                <h3 className="font-bold text-lg text-slate-900 mb-2">Delete File?</h3>
+                <p className="text-slate-500 text-sm mb-6">Are you sure you want to delete this file? The record will be permanently removed.</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setDeleteConfirmFileId(null)}
+                    className="flex-1 py-2.5 px-4 border border-slate-200 rounded-md shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDeleteFile}
+                    className="flex-1 py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors"
+                  >
+                    Yes, Delete
+                  </button>
+                </div>
+             </div>
+          </div>
         </div>
       )}
     </div>
