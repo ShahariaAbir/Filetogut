@@ -3,7 +3,14 @@ import cors from 'cors';
 import { apiRouter } from '../src/api-router';
 
 const app = express();
-app.use(cors());
+const corsOptions: cors.CorsOptions = {
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use('/api', apiRouter);
 
