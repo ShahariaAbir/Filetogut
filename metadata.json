@@ -1,0 +1,6 @@
+{
+  "name": "ForgeDrive",
+  "description": "Universal File Uploader powered by Insforge (Supabase). Features file buckets, developer API key generation, and upload URLs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

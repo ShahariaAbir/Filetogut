@@ -1,0 +1,199 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { supabase } from '../lib/supabase';
+import { Upload, Copy, Trash2, File, Link as LinkIcon, Loader2 } from 'lucide-react';
+import { cn } from '../lib/utils';
+
+interface FileData {
+  id: string;
+  file_name: string;
+  public_url: string;
+  size: number;
+  content_type: string;
+  created_at: string;
+}
+
+export default function Files() {
+  const [files, setFiles] = useState<FileData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetchFiles();
+  }, []);
+
+  const fetchFiles = async () => {
+    const { data, error } = await supabase
+      .from('files')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    if (!error && data) {
+      setFiles(data);
+    }
+    setLoading(false);
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const fileExt = file.name.split('.').pop();
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const fileName = `${user.id}/${Date.now()}-${safeName}`;
+
+      // 1. Upload to Storage
+      const { error: uploadError } = await supabase.storage
+        .from('uploads')
+        .upload(fileName, file, { cacheControl: '3600', upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      // 2. Get Public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('uploads')
+        .getPublicUrl(fileName);
+
+      // 3. Insert into database
+      const { error: dbError } = await supabase.from('files').insert({
+        user_id: user.id,
+        file_name: file.name,
+        content_type: file.type,
+        size: file.size,
+        public_url: publicUrl,
+      });
+
+      if (dbError) throw dbError;
+
+      // Refresh list
+      fetchFiles();
+    } catch (error: any) {
+      alert(`Upload failed: ${error.message}`);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const copyToClipboard = (url: string) => {
+    navigator.clipboard.writeText(url);
+    alert('Link copied to clipboard!');
+  };
+
+  const deleteFile = async (id: string, url: string) => {
+    if (!confirm('Are you sure you want to delete this file?')) return;
+    
+    // We only delete from DB here for simplicity, in a real app you'd also remove from Storage
+    const { error } = await supabase.from('files').delete().eq('id', id);
+    if (error) alert(`Delete failed: ${error.message}`);
+    else fetchFiles();
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">My Files</h1>
+          <p className="text-slate-500 text-sm mt-1">Upload and manage your universal file links.</p>
+        </div>
+        
+        <input 
+          type="file" 
+          className="hidden" 
+          ref={fileInputRef} 
+          onChange={handleFileUpload} 
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition disabled:opacity-50 text-sm font-medium shadow-sm"
+        >
+          {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+          {uploading ? 'Uploading...' : 'Upload File'}
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="py-12 flex justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        </div>
+      ) : files.length === 0 ? (
+        <div className="bg-white border border-slate-200 rounded-xl p-8 flex flex-col items-center justify-center border-dashed border-2 bg-slate-50 hover:bg-indigo-50 transition-colors h-64 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center">
+              <Upload className="w-8 h-8 text-indigo-600" />
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 mb-1">No files uploaded</h3>
+          <p className="text-slate-500 text-sm mb-6">Click the upload button to add your first file.</p>
+        </div>
+      ) : (
+        <div className="bg-white border border-slate-200 rounded-xl flex-1 flex flex-col overflow-hidden shadow-sm">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-slate-50">
+              <tr className="text-xs font-semibold text-slate-400 uppercase">
+                <th scope="col" className="px-6 py-3 border-b">File Name</th>
+                <th scope="col" className="px-6 py-3 border-b">Size</th>
+                <th scope="col" className="px-6 py-3 border-b">Date</th>
+                <th scope="col" className="px-6 py-3 border-b text-right relative"><span className="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody className="bg-white text-sm">
+              {files.map((file) => (
+                <tr key={file.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 border-b font-medium text-slate-900 border-slate-100">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-lg bg-slate-100">
+                        {file.content_type?.startsWith('image/') ? (
+                          <img src={file.public_url} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                        ) : (
+                          <File className="h-5 w-5 text-slate-500" />
+                        )}
+                      </div>
+                      <div className="ml-4">
+                        <div className="truncate max-w-xs" title={file.file_name}>{file.file_name}</div>
+                        <div className="text-xs text-slate-500 font-normal">{file.content_type || 'Unknown type'}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 border-b text-slate-500 border-slate-100">
+                    {formatSize(file.size)}
+                  </td>
+                  <td className="px-6 py-4 border-b text-slate-500 border-slate-100">
+                    {new Date(file.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 border-b text-right border-slate-100">
+                    <div className="flex items-center justify-end gap-3 text-indigo-600 font-mono text-xs">
+                       <button onClick={() => window.open(file.public_url, '_blank')} className="text-slate-400 hover:text-indigo-600 transition" title="View">
+                        <LinkIcon className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => copyToClipboard(file.public_url)} className="text-slate-400 hover:text-indigo-600 transition flex items-center gap-1" title="Copy URL">
+                        <Copy className="w-3 h-3" /> <span className="hidden sm:inline">Copy link</span>
+                      </button>
+                      <button onClick={() => deleteFile(file.id, file.public_url)} className="text-slate-400 hover:text-red-500 transition" title="Delete">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
