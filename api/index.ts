@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { apiRouter } from '../src/api-router';
+import { apiRouter } from '../src/api-router.js';
 
 const app = express();
 const corsOptions: cors.CorsOptions = {
