@@ -14,6 +14,18 @@ const insforge = createClient({
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+apiRouter.get('/health', (_req, res) => {
+  return res.status(200).json({
+    ok: true,
+    message: 'API is reachable',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+apiRouter.options('/upload', (_req, res) => {
+  return res.sendStatus(204);
+});
+
 apiRouter.post('/upload', upload.single('file'), async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
